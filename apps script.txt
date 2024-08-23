@@ -1,0 +1,175 @@
+function doPost(e) {
+  try {
+    // ตรวจสอบว่ามีข้อมูลที่ส่งมาหรือไม่
+    if (e.postData.contents) {
+      // แปลงข้อมูล JSON เป็น JavaScript object
+      var data = JSON.parse(e.postData.contents);
+      
+      // ตรวจสอบว่ามีข้อมูลรูปภาพหรือไม่
+      if (data.image) {
+        // แปลง base64 string เป็น Blob
+        var imageBlob = Utilities.newBlob(Utilities.base64Decode(data.image), 'image/png', 'image.png');
+        
+        // บันทึกรูปภาพลงใน Google Drive
+        var folder = DriveApp.getFolderById('YOUR_FOLDER_ID'); // แทนที่ด้วย ID ของโฟลเดอร์ที่คุณต้องการบันทึกรูปภาพ
+        var file = folder.createFile(imageBlob);
+        
+        // ส่งการตอบกลับ
+        return ContentService.createTextOutput(JSON.stringify({
+          'status': 'success',
+          'message': 'Image uploaded successfully',
+          'fileId': file.getId()
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        throw new Error('No image data found');
+      }
+    } else {
+      throw new Error('No post data received');
+    }
+  } catch (error) {
+    // จัดการกับข้อผิดพลาด
+    return ContentService.createTextOutput(JSON.stringify({
+      'status': 'error',
+      'message': error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+
+
+function doGet(request){
+
+ var imageurl = request.parameter.imageurl
+ /*
+ var imageurl = "https://co.lnwfile.com/_/co/_raw/s2/0q/60.jpg"
+ var imageurl = "https://f.ptcdn.info/282/081/000/rypxu87l1kIpGvypT5ml-o.jpg"
+ var imageurl = "https://pbs.twimg.com/media/EEgmYqfU0AEoRhw?format=jpg&name=900x900"  // กสิกร
+ var imageurl = "https://stat.bora.dopa.go.th/card/img/card4_f.jpg"
+ var imageurl ="https://farm8.staticflickr.com/7562/16318365266_5e4f10fd51_z.jpg"
+ */ 
+ var result = extractslip(imageurl)
+ 
+ console.log(result)
+ //result = extracttext(result)
+ console.log(result)
+ //var result = JSON.stringify(result);
+ //return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON); 
+ return ContentService.createTextOutput(result); 
+}
+
+function extractslip(imageurl) {
+  var imageBlob = UrlFetchApp.fetch(imageurl).getBlob();
+  var resource = {
+    title:imageBlob.getName(),
+    mimeType: imageBlob.getContentType()
+  }
+  var options = {
+    ocr:true
+  }
+  var docFile = Drive.Files.insert(resource,imageBlob,options)
+  var doc = DocumentApp.openById(docFile.id)
+  var text = doc.getBody().getText()
+  //console.log(text)
+  Drive.Files.remove(docFile.id)
+  //console.log(text)
+  //result = extracttext(text)
+  return text
+}
+
+function extracttext(text){
+/*
+var text = `ttb
+(....
+ttb
+โอนเงินสําเร็จ 29 30
+นาย บัญญัติ ศรีทวีกูล
+XXX-X-XX923-4
+ttb
+นาย ศักดา เสาะแสวง
+XXX-X-XX 208-2
+KBank
+จํานวนเงิน
+ค่าธรรมเนียม
+1 ส.ค. 66, 17:27 น.
+รหัสอ้างอิง: 202308013578951258
+15,000.00
+0.00`
+
+ var text = `DDDDD DDDD
+จาก
+ไปยัง
+SCB
+โอนเงินสําเร็จ
+17 พ.ย. 2562 - 10:41
+รหัสอ้างอิง: 201911172Tn9jRgrrBsMqbJKA
+0 น.ส. สุปรียา จีนกิ๊ด
+xxx-xxx166-2
+@ นางสาว ชุลีกร อัครภูมิธรรม
+จํานวนเงิน
+ผู้รับเงินสามารถสแกนคิวอาร์โค้ดนี้ เพื่อตรวจสอบสถานะการโอนเงิน
+Xxx-xxx578-0
+149.00` 
+
+
+  var text = `07:08 Bangkok Bank
+รายการสําเร็จ
+27 มี.ค. 65, 07:07
+จํานวนเงิน 1.00 THB
+จาก
+นาย วินน์ 926-0-xxx401 ธนาคารกรุงเทพ
+ไปที่
+u.ส. สุนั้น ลาภดํารงกิจ 042-2-xxx686 ธนาคารกสิกรไทย , , ,
+ค่าธรรมเนียม 0.00 THB
+300000.14
+หมายเลขอ้างอิง 403428 เลขที่อ้างอิง 2022032707075223007878308
+นางยุวดี ศรีสวัสดิ์ 123
+สแกนเพื่อตรวจสอบ
+รายการโปรด
+ส่งข้อความ SMS
+แชร์
+หมวดหมู่
+อื่นๆ`
+*/
+  var tid = text.match(/[0-9a-zA-Z]{18,30}/g)[0];
+  //console.log(tid)
+  //var amt = text.match(/[0-9]+\.[0-9]{2}/g)[0];
+  var amt = text.match(/^(\$?\-?([1-9]{1}[0-9]{0,2}(\,\d{3})*(\.\d{0,2})?|[1-9]{1}\d{0,}(\.\d{0,2})?|0(\.\d{0,2})?|(\.\d{1,2}))$|^\-?\$?([1-9]{1}\d{0,2}(\,\d{3})*(\.\d{0,2})?|[1-9]{1}\d{0,}(\.\d{0,2})?|0(\.\d{0,2})?|(\.\d{1,2}))$|^\(\$?([1-9]{1}\d{0,2}(\,\d{3})*(\.\d{0,2})?|[1-9]{1}\d{0,}(\.\d{0,2})?|0(\.\d{0,2})?|(\.\d{1,2}))\))$/m)[0];
+  //console.log(amt)
+  
+  name = text.match(/(นาย|นาง|น.ส.|u.ส.)[ก-๛a-z ]+/g)
+  //console.log(name)
+  var nname = []
+  for (let i = 0; i < name.length; i++) {
+    nname.push(name[i].trim());
+  }
+  //console.log(nname)
+  nfrom = nname[0]
+  nto = nname[1]
+  
+  //act = text.match(/([0-9|x|X]+-+[0-9|(x|X)]+-+)[0-9|(x|X)]+/g)
+  act = text.match(/([0-9]|x|X)+-([0-9]|x|X)+-([0-9]|x|X)+/g)
+  //console.log(act)
+  actfrom = act[0]
+  actto = act[1]
+
+  var result = {}
+  result['tid'] = tid
+  result['from'] = {'name':nfrom,'account':actfrom}
+  result['to'] = {'name':nto,'account':actto}
+  result['amount'] = amt
+  //console.log(result)
+  return result
+  
+  // //console.log(tid)
+  // //console.log(amt)
+  // //console.log(nname)
+  // //console.log(act)
+  // var result = {}
+  // result['tid'] = tid
+  // result['amount'] = amt
+  // result['from'] = name[0]
+  // result['to'] = name[1]
+  // console.log(result)
+  // return result
+}
+

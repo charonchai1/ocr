@@ -1,0 +1,46 @@
+function doPost(e) {
+  try {
+    // ตรวจสอบว่ามีข้อมูลที่ส่งมาหรือไม่
+    if (e.postData.contents) {
+      // แปลงข้อมูล JSON เป็น JavaScript object
+      var data = JSON.parse(e.postData.contents);
+      
+      // ตรวจสอบว่ามีข้อมูลรูปภาพหรือไม่
+      if (data.image) {
+        // แปลง base64 string เป็น Blob
+        var imageBlob = Utilities.newBlob(Utilities.base64Decode(data.image), 'image/png', 'image.png');
+        var result_text = extractslip(imageBlob)
+        return ContentService.createTextOutput(result_text); 
+      } else {
+        throw new Error('No image data found');
+      }
+    } else {
+      throw new Error('No post data received');
+    }
+  } catch (error) {
+    จัดการกับข้อผิดพลาด
+    return ContentService.createTextOutput(JSON.stringify({
+      'status': 'error',
+      'message': error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function extractslip(imageBlob) {
+  var resource = {
+    title:imageBlob.getName(),
+    mimeType: imageBlob.getContentType()
+  }
+  var options = {
+    ocr:true
+  }
+  var docFile = Drive.Files.insert(resource,imageBlob,options)
+  var doc = DocumentApp.openById(docFile.id)
+  var text = doc.getBody().getText()
+  DriveApp.getFileById(docFile.id).setTrashed(true);
+
+  return text
+}
+
+
+
