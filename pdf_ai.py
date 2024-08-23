@@ -13,7 +13,6 @@ output_folder_jpg = 'c:/_mydata/JobNSTDAOCR/jpg_temp'  # path temp สำหร�
 output_folder_jpg = r"c:/t1/"
 script_url = ""  # แทนที่ด้วย URL Apps Script
 
-
 # ฟังก์ชันสำหรับสรุปข้อความ
 def summarize_text(text):
     client = Client()
